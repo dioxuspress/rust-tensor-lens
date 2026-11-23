@@ -1,0 +1,5 @@
+[application]
+name = "rust-tensor-lens"
+
+[web.app]
+title = "Rust Tensor Lens · Pure-Rust WASM AI Math & Operator Lab"

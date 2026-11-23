@@ -1,0 +1,67 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Rust Tensor Lens (WASM)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Dioxus CLI
+        uses: taiki-e/install-action@v2
+        with:
+          tool: dioxus-cli@0.7.10
+
+      - name: Install binaryen (wasm-opt)
+        run: sudo apt-get update && sudo apt-get install -y binaryen
+
+      - name: Build static web bundle
+        run: |
+          dx build --release --platform web --base-path rust-tensor-lens
+          SITE_DIR="$(find target/dx/rust-tensor-lens/release/web -maxdepth 1 -name public -type d)"
+          echo "SITE_DIR=$SITE_DIR" >> "$GITHUB_ENV"
+          for wasm in "$SITE_DIR"/assets/*.wasm; do
+            wasm-opt -Oz \
+              --enable-bulk-memory \
+              --enable-nontrapping-float-to-int \
+              --enable-sign-ext \
+              --enable-mutable-globals \
+              -o "$wasm" "$wasm"
+          done
+          node scripts/prepare-pages.mjs "$SITE_DIR" /rust-tensor-lens
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.SITE_DIR }}
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
