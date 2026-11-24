@@ -1,0 +1,15 @@
+[package]
+name = "rust-tensor-lens"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/dioxuspress/rust-tensor-lens"
+description = "Zero-backend Rust/WASM interactive lab for RoPE/YaRN, INT4/NF4/1.58-bit quantization, BPE tokenization, and LLM VRAM budgeting."
+
+[dependencies]
+dioxus = { version = "0.7", features = ["web"] }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
